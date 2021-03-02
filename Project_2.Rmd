@@ -1,0 +1,634 @@
+---
+title: "Project 2: SVD Analysis of Partisanship in U.S. Congress"
+author: "Yi-Hsuan Wu, Cherry Pan"
+date: "2/17/21"
+output: html_document
+---
+
+<!--- Begin styling code. --->
+<style type="text/css">
+/* Whole document: */
+body{
+  font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif;
+  font-size: 12pt;
+}
+h1.title {
+  font-size: 38px;
+  text-align: center;
+}
+h4.author {
+  font-size: 18px;
+  text-align: center;
+}
+h4.date {
+  font-size: 18px;
+  text-align: center;
+}
+</style>
+<!--- End styling code. --->
+
+# Introduction
+
+In this project, we explored U.S. Congress voting data from [voteview.com](https://voteview.com). We used SVD analysis to examine the partisanship of U.S.Congress. The data that we examined were [90th House of Representatives](https://raw.githubusercontent.com/bryandmartin/STAT302/master/docs/Projects/project2_svd/house_90_raw.csv), [90th Senate](https://raw.githubusercontent.com/bryandmartin/STAT302/master/docs/Projects/project2_svd/senate_90_raw.csv), [116th House of Representatives](https://raw.githubusercontent.com/bryandmartin/STAT302/master/docs/Projects/project2_svd/house_116_raw.csv), [116th Senate](https://raw.githubusercontent.com/bryandmartin/STAT302/master/docs/Projects/project2_svd/senate_116_raw.csv). Note that in our analysis, blue represents the vote from Democrates, red represents the vote from Republicans, and green represents the vote from Independents. We hope this analysis can help people to better understand the U.S. partisanship from different aspects through visualizations and SVD analysis. 
+
+# Analysis
+
+### Insight 1
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+# Load the packages need for this project
+library(tidyverse)
+library(ggplot2)
+library(ggExtra)
+library(dplyr)
+library(kableExtra)
+# Read data sets and store as variable, and replace all the missing 
+# value to 0
+rep_116 <- read.csv("https://raw.githubusercontent.com/bryandmartin/STAT302/master/docs/Projects/project2_svd/house_116_raw.csv")
+rep_116[is.na(rep_116)] <- 0
+sen_116 <- read.csv("https://raw.githubusercontent.com/bryandmartin/STAT302/master/docs/Projects/project2_svd/senate_116_raw.csv")
+sen_116[is.na(sen_116)] <- 0
+rep_90 <- read.csv("https://raw.githubusercontent.com/bryandmartin/STAT302/master/docs/Projects/project2_svd/house_90_raw.csv")
+rep_90[is.na(rep_90)] <- 0
+sen_90 <- read.csv("https://raw.githubusercontent.com/bryandmartin/STAT302/master/docs/Projects/project2_svd/senate_90_raw.csv")
+sen_90[is.na(sen_90)] <- 0
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+# Compute SVD for the data sets
+rep_116_svd <- svd(rep_116[, -1:-4]) 
+sen_116_svd <- svd(sen_116[, -1:-4]) 
+rep_90_svd <- svd(rep_90[ , -1:-4])
+sen_90_svd <- svd(sen_90[ , -1:-4])
+# Compute singular vectors and the data frame for the 116th house to plot singular
+# values vs. energy
+rep_116_sing_vals2 <- rep_116_svd$d^2
+rep_116_energy_df <- data.frame("sing_vals" = rep_116_sing_vals2,
+                                "energy" = cumsum(rep_116_sing_vals2)/sum(rep_116_sing_vals2))
+# Plot singular value vs energy
+ggplot(rep_116_energy_df, aes(x = 1:nrow(rep_116_energy_df), y = energy)) +
+  geom_point() +
+  theme_bw(base_size = 15) +
+  labs(title = "Energy graph of 116th House",
+       y = "Cumulative Energy", x = "k") + 
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+# Compute singular vectors and the data frame for the 116th senate to plot singular
+# values vs. energy
+sen_116_sing_vals2 <- sen_116_svd$d^2
+sen_116_energy_df <- data.frame("sing_vals" = sen_116_sing_vals2,
+                                "energy" = cumsum(sen_116_sing_vals2)/sum(sen_116_sing_vals2))
+# Plot singular value vs energy
+ggplot(sen_116_energy_df, aes(x = 1:nrow(sen_116_energy_df), y = energy)) +
+  geom_point() +
+  theme_bw(base_size = 15) +
+  labs(title = "Energy graph of 116th Senate",
+       y = "Cumulative Energy", x = "k") + 
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+```
+
+_Figure a (top)_  
+_Figure b (below)_
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+# Create data frames used to map 116th House partisanship, taking U from SVD
+rep_116_u_df <- data.frame("x" = rep_116_svd$u[, 1], 
+                           "y" = rep_116_svd$u[, 2],
+                           "label" = rep_116$bioname)
+# Plot the partisanship for 116th House
+rep_116_u_plot <- ggplot(rep_116_u_df, aes(x = x, y = y, label = label)) + 
+  theme_bw(base_size = 15) +
+  geom_point(aes(color = rep_116$party_code)) +
+  scale_color_manual("Party", values = c("blue", "green", "red")) +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold")) +
+  labs(title = "Partisanship of 116th House", 
+       x = "Partisan Coordinate", y = "Bipartisan Coordinate")
+# Show the plot
+rep_116_u_plot 
+```
+
+
+_Figure 1_ 
+
+ 
+
+_Figure 1_ is the mapping of partisanship of the 116th house representatives. The mapping was derived from the left singular vectors(U) from the Singular Value Decomposition(SVD) of 36 historical votings of the members of the 116th house of representative(Jan 2019-Jan 2021). When analyzing the data sets, I converted all the "NA" values to 0, assuming "present" for the voting. SVD is defined as
+$$ \mathbf{X} = \mathbf{U}\mathbf{D}\mathbf{V}^T. $$ 
+The left singular vectors U, in general term, maps n observations to p "concepts". It's also noticed that we used two coordinates for the mapping since for this data set, the two leading singular vectors(k) give an over 80% of the energy of the data. The energy of the matrix is defined as the sum of the squared singular values and measures how good the singular vectors approximate the data. _Figure a_ and _Figure b_ show that two coordinates, meaning k = 2, give an over 80% approximation to the voting matrix and congressional voting positions of 116th house and 116th senate. This is also true for the 90th house and 90th senate.
+
+We can see that each party has a fairly strong voting pattern, and the voting  pattern of each party splits distinctively from the middle of the graph. Voting 
+patterns for a few republicans differ considerably from the majority of the party while only one of the democrats had a rather differing voting pattern. There is only one independent representative, (Justin Amash), and he voted quite differently from both of the parties. 
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+# Create data frames used to map 116th Senate partisanship, taking U from SVD
+sen_116_u_df <- data.frame("x" = sen_116_svd$u[, 1], 
+                           "y" = sen_116_svd$u[, 2],
+                           "label" = sen_116$bioname)
+# Plot the partisanship for 116th Senate
+sen_116_u_plot <- ggplot(sen_116_u_df, aes(x = x, y = y, label = label)) + 
+  theme_bw(base_size = 15) +
+  geom_point(size = 1, aes(color = sen_116$party_code)) +
+  scale_color_manual("Party", values = c("blue", "green", "red")) +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold")) +
+  labs(title = "Partisanship of 116th Senate", 
+       x = "Partisan Coordinate", y = "Bipartisan Coordinate")
+# Show the plot
+sen_116_u_plot
+```
+
+_Figure 2_    
+This figure is a mapping of partisanship of the 116th senate. The mapping was 
+obtained in the same fashion as _Figure 1_. Each party still has a fairly strong voting pattern, with the patterns splitting distinctively from the middle of the graph. However, for the 116th senate, voting pattern for the democrats
+differs considerably more than that for the republicans.
+
+Then we want to examine the how the voting in 90th Congress and 116th Congress are different from each other, thus we also plot the partisanship of 90th House of Representative and Senate for a closer comparison.
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+# Create data frames used to map 90th House partisanship, taking U from SVD
+rep_90_u_df <- data.frame("x" = rep_90_svd$u[, 1], 
+                           "y" = rep_90_svd$u[, 2],
+                           "label" = rep_90$bioname)
+# Plot the partisanship for 90th House
+rep_90_u_plot <- ggplot(rep_90_u_df, aes(x = x, y = y, label = label)) + 
+  theme_bw(base_size = 15) +
+  geom_point(aes(color = rep_90$party_code)) +
+  scale_color_manual("Party", values = c("blue", "red", "green")) +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold")) +
+  labs(title = "Partisanship of 90th House", 
+       x = "Partisan Coordinate", y = "Bipartisan Coordinate")
+# Show the plot
+rep_90_u_plot 
+```
+
+_Figure 3_
+
+This figures shows the partisanship of 90th House of Representatives. One interesting obsersation is that there were only Democrats and Republicans parties in the House of representatives. Independents was not included in the 90th House. Unlike the voting for 116th the House of Represenatitives which shows a strong partisanship among parties, the voting points from these two parties cluster together, indicating a weaker partisanship.
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+# Create data frames used to map 90th Senate partisanship, taking U from SVD
+sen_90_u_df <- data.frame("x" = sen_90_svd$u[, 1], 
+                           "y" = sen_90_svd$u[, 2],
+                           "label" = sen_90$bioname)
+# Plot the partisanship for 90th Senate
+sen_90_u_plot <- ggplot(sen_90_u_df, aes(x = x, y = y, label = label)) + 
+  theme_bw(base_size = 15) +
+  geom_point(aes(color = sen_90$party_code)) +
+  scale_color_manual("Party", values = c("blue", "red", "green")) +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold")) +
+  labs(title = "Partisanship of 90th Senate", 
+       x = "Partisan Coordinate", y = "Bipartisan Coordinate")
+# Show the plot
+sen_90_u_plot 
+```
+
+_Figure 4_
+
+This figures shows the partisanship of 90th Senate. Similar to what we've observed in Figure 3, there was no representative of Independents Party in the Senate. From this plot, we can see that the voting point for Democrates and Republicans were all mixed together, implying that the views were not too polarized in the earlier time and people tended to have modest views. 
+
+### Insight 2
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+rep_116_u_df <- mutate(rep_116_u_df, "Extremity" = abs(x - mean(x)))
+rep_116_least_partisan <- filter(rep_116_u_df, Extremity == min(Extremity))
+rep_116_most_partisan <- filter(rep_116_u_df, Extremity == max(Extremity))
+rep_116_u_df_extremity <- rbind(rep_116_least_partisan,rep_116_most_partisan)
+rep_116_u_df_extremity$Ranking <- c("Least Partisan","Most Partisan")
+tab1 <- as.matrix(rep_116_u_df_extremity)
+tab1 <- tab1[,-2]
+colnames(tab1)[1:2] <- c("Partisan Coordinate", "Bio Name")
+kable_styling(kable(tab1, caption = 'Extreme Partisanship in 116th House'))
+```
+
+_Table 1_    
+Since we observed a few "erratic" voting patterns in both partisanship mappings for
+116th house of representatives and 116th senate, we wonder who had the most extreme 
+voting patterns. Extremity is calculated as taking the absolute values of the individual's 
+partisan coordinate(x) minus the mean of the entire partisan coordinate($\mu_x$), 
+simply
+$$ |x - \mu_x|. $$
+The least partisan means it has smallest absolute value, and vice versa. The 
+least partisan member of the 116th house is Pelosi while the most partisan
+individual is Biggs. Pelosi is a democrat. On the mapping of partisanship of the
+116th house representatives, she is the "blue point" in the upper middle part of 
+the graph. Biggs is a republican. On the mapping, he is represented by the right-
+most red point.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+sen_116_u_df <- mutate(sen_116_u_df, "Extremity" = abs(x - mean(x)))
+sen_116_least_partisan <- filter(sen_116_u_df, Extremity == min(Extremity))
+sen_116_most_partisan <- filter(sen_116_u_df, Extremity == max(Extremity))
+sen_116_u_df_extremity <- rbind(sen_116_least_partisan,sen_116_most_partisan)
+sen_116_u_df_extremity$Ranking <- c("Least Partisan","Most Partisan")
+tab2 <- as.matrix(sen_116_u_df_extremity)
+tab2 <- tab2[,-2]
+colnames(tab2)[1:2] <- c("Partisan Coordinate", "Bio Name")
+kable_styling(kable(tab2, caption = 'Extreme Partisanship in 116th Senate'))
+```
+
+_Table 2_  
+For the 116 senate, the least partisan individual is Manchin, and the most is
+Markey. Both of them are democrats. Manchin, on the mapping, is represented by
+a blue dot in the bottom-middle part of the graph. Markey is the right-most blue
+dot in the graph. Such observation is predictable since the voting pattern of 
+116th senate is somewhat spread-out, instead of clustering as in the 116 house.
+
+### Insight 3
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+mi_rep_116 <- rep_116 %>%
+  filter(state_abbrev %in% "MI" | state_abbrev %in% "WI" | state_abbrev %in% "PA"
+         | state_abbrev %in% "GA" | state_abbrev %in% "AZ") 
+mi_rep_116_svd <- svd(mi_rep_116[, -1:-4]) 
+mi_rep_116_u_df <- data.frame("x" = mi_rep_116_svd$u[,1], 
+                           "y" = mi_rep_116_svd$u[,2],
+                           "label" = mi_rep_116$bioname)
+
+mi_rep_116_u_plot <- ggplot(mi_rep_116_u_df, aes(x = x, y = y, label = label)) + 
+  theme_bw(base_size = 15) +
+  geom_point(aes(color = mi_rep_116$party_code)) +
+  scale_color_manual("Party", values = c("blue", "green", "red")) +
+  labs(title = "Partisanship of 116th House of Flipped States", 
+       x = "Partisan Coordinate", y = "Bipartisan Coordinate")
+mi_rep_116_u_plot
+```
+
+_Figure 5_  
+In the last presidential election in 2020, 5 swing states flipped from red to blue. They are Arizona, Georgia, Michigan, Pennsylvania and Wisconsin. Hence, we're intrigued by the voting pattern of the house and want to see if there's a pattern associated with the flipping. We filtered the members from these five states and created partisan mapping for 116th house in the same fashion as did in _Figure 1_ and _Figure 2_.  
+
+_Figure 5_ shows that the voting pattern for the republicans differs considerably more than that for the democrats and is somewhat spread-out. This could imply that republicans in these five states may have voted differently in last election from most republicans as they didn't vote vastly similarly as the majority of the party in the 36 votings.
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+mi_rep_90 <- rep_90 %>%
+  filter(state_abbrev %in% "MI" | state_abbrev %in% "WI" | state_abbrev %in% "PA"
+         | state_abbrev %in% "GA" | state_abbrev %in% "AZ") 
+mi_rep_90_svd <- svd(mi_rep_90[, -1:-4]) 
+mi_rep_90_u_df <- data.frame("x" = mi_rep_90_svd$u[,1], 
+                           "y" = mi_rep_90_svd$u[,2],
+                           "label" = mi_rep_90$bioname)
+
+mi_rep_90_u_plot <- ggplot(mi_rep_90_u_df, aes(x = x, y = y, label = label)) + 
+  theme_bw(base_size = 15) +
+  geom_point(aes(color = mi_rep_90$party_code)) +
+  scale_color_manual("Party", values = c("blue", "red")) +
+  labs(title = "Partisanship of 90th House of Flipped States",
+       x = "Partisan Coordinate", y = "Bipartisan Coordinate")
+mi_rep_90_u_plot
+```
+
+_Figure 6_
+
+W also mapped out the partisanship of the 90th house (1967-1969) of the five flipped states, in the same way as before. From the graph, it's observed that there's no distinctive clustering that could indicate a partisanship. However, voting pattern for republicans is much more clustered than that for the democrats. Interestingly, the elected president of 1968, Nixon, is a republican.  
+
+From _Figure 5_ and _Figure 6_, there may be an evidence that presidential election may have an association with strong partisan voting pattern in these five swing states.
+
+### Insight 4
+Since we live in Washington, a highly democratic state, we're prompted to find out how the partisanship has changed for the most Democratic state. According to [this source](https://news.gallup.com/poll/181475/massachusetts-maryland-democratic-states.aspx), the most Democratic state is Massachusetts.
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+ma_rep_90 <- rep_90 %>%
+  filter(state_abbrev %in% "MA")
+ma_rep_90_svd <- svd(ma_rep_90[, -1:-4]) 
+ma_rep_90_u_df <- data.frame("x" = ma_rep_90_svd$u[,1], 
+                           "y" = ma_rep_90_svd$u[,2],
+                           "label" = ma_rep_90$bioname)
+
+ma_rep_90_u_plot <- ggplot(ma_rep_90_u_df,
+                           aes(x = x, y = y, label = label)) + 
+  theme_bw(base_size = 15) +
+  geom_point(aes(color = ma_rep_90$party_code)) +
+  scale_color_manual("Party", values = c("blue", "red")) +
+  labs(title = "Partisanship of 90th House of MA",
+       x = "Partisan Coordinate", y = "Bipartisan Coordinate") +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold")) 
+ma_rep_90_u_plot
+```
+
+_Figure 7_ 
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+ma_sen_90 <- sen_90 %>%
+  filter(state_abbrev %in% "MA")
+ma_sen_90_svd <- svd(ma_sen_90[, -1:-4]) 
+ma_sen_90_u_df <- data.frame("x" = ma_sen_90_svd$u[,1], 
+                           "y" = ma_sen_90_svd$u[,2],
+                           "label" = ma_sen_90$bioname)
+
+ma_sen_90_u_plot <- ggplot(ma_sen_90_u_df,
+                           aes(x = x, y = y, label = label)) + 
+  theme_bw(base_size = 15) +
+  geom_point(aes(color = ma_sen_90$party_code)) +
+  scale_color_manual("Party", values = c("blue", "red")) +
+  labs(title = "Partisan of 90th Senate of MA",
+       x = "Partisan Coordinate", y = "Bipartisan Coordinate") +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold")) 
+ma_sen_90_u_plot
+```
+
+_Figure 8_ 
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+ma_rep_116 <- rep_116 %>%
+  filter(state_abbrev %in% "MA")
+ma_rep_116_svd <- svd(ma_rep_116[, -1:-4]) 
+ma_rep_116_u_df <- data.frame("x" = ma_rep_116_svd$u[,1], 
+                           "y" = ma_rep_116_svd$u[,2],
+                           "label" = ma_rep_116$bioname)
+
+ma_rep_116_u_plot <- ggplot(ma_rep_116_u_df,
+                           aes(x = x, y = y, label = label)) + 
+  theme_bw(base_size = 15) +
+  geom_point(aes(color = ma_rep_116$party_code)) +
+  scale_color_manual("Party", values = c("blue", "red")) +
+  labs(title = "Partisanship of 116th House of MA",
+       x = "Partisan Coordinate", y = "Bipartisan Coordinate") +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold")) 
+ma_rep_116_u_plot
+```
+
+_Figure 9_ 
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+ma_sen_116 <- sen_116 %>%
+  filter(state_abbrev %in% "MA")
+ma_sen_116_svd <- svd(ma_sen_116[, -1:-4]) 
+ma_sen_116_u_df <- data.frame("x" = ma_sen_116_svd$u[,1], 
+                           "y" = ma_sen_116_svd$u[,2],
+                           "label" = ma_sen_116$bioname)
+
+ma_sen_116_u_plot <- ggplot(ma_sen_116_u_df,
+                           aes(x = x, y = y, label = label)) + 
+  theme_bw(base_size = 15) +
+  geom_point(aes(color = ma_sen_116$party_code)) +
+  scale_color_manual("Party", values = c("blue", "red")) +
+  labs(title = "Partisanship of 116th Senate of MA",
+       x = "Partisan Coordinate", y = "Bipartisan Coordinate") +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold")) 
+ma_sen_116_u_plot
+```
+
+_Figure 10_ 
+
+As we can see above, MA consisted of both Democrats and Republicans in the 90th Senate and the House of Representative. There were 2 more Democrats than Republicans in 90th. In the 116th Congress, all the representatives from MA were all Democrats. 
+
+
+# Conclusion
+In this analysis, we use visualization and SVD analysis to explore the partisanship of the U.S. Congress. By showing the partisanship of voting of 90th Senate, 90th House of Representatives, 116th Senate, and 116th House of Representatives respectively, we can conclude that the 90th was less partisan and most people didn't have polarized views about politics, while 116th has shown strong partisanship. Later, we delved more into the most extreme voting patterns in 116th voting, we found out that Pelosi is the least partisan politician while Biggs is the most partisan politician in the House of Representatives. For the 116th Senate, the least partisan individual is Manchin, and the most partisan individual goes to Markey. In our Insight 3, we look into the 5 swing states who flipped from red to blue. By graphing the voting patterns, we found out that there might be a strong connection between the presidential election and how strong the partisanship is. The stronger the partisanship is for a certain party, the greater chance of winning the presidency. We also examined the partisanship for MA who is the most Democrats State. MA has changed a lot compared to 90th and 116th, and all representatives of MA in both Senate and the House of Representatives are Democrats. And the energy tells us that two coordinates can well approximated the congressional voting position.
+
+
+
+
+# Appendix
+```{r, eval = FALSE, echo = TRUE, warning = FALSE, message = FALSE}
+# Load the packages need for this project
+library(tidyverse)
+library(ggplot2)
+library(ggExtra)
+library(dplyr)
+library(kableExtra)
+# Read data sets and store as variable, and replace all the missing 
+# value to 0
+rep_116 <- read.csv("https://raw.githubusercontent.com/bryandmartin/STAT302/master/docs/Projects/project2_svd/house_116_raw.csv")
+rep_116[is.na(rep_116)] <- 0
+sen_116 <- read.csv("https://raw.githubusercontent.com/bryandmartin/STAT302/master/docs/Projects/project2_svd/senate_116_raw.csv")
+sen_116[is.na(sen_116)] <- 0
+rep_90 <- read.csv("https://raw.githubusercontent.com/bryandmartin/STAT302/master/docs/Projects/project2_svd/house_90_raw.csv")
+rep_90[is.na(rep_90)] <- 0
+sen_90 <- read.csv("https://raw.githubusercontent.com/bryandmartin/STAT302/master/docs/Projects/project2_svd/senate_90_raw.csv")
+sen_90[is.na(sen_90)] <- 0
+```
+
+```{r, eval = FALSE, echo = TRUE, warning = FALSE, message = FALSE}
+# Compute SVD for the data sets
+rep_116_svd <- svd(rep_116[, -1:-4]) 
+sen_116_svd <- svd(sen_116[, -1:-4]) 
+rep_90_svd <- svd(rep_90[ , -1:-4])
+sen_90_svd <- svd(sen_90[ , -1:-4])
+# Compute singular vectors and the data frame for the 116th house to plot singular
+# values vs. energy
+rep_116_sing_vals2 <- rep_116_svd$d^2
+rep_116_energy_df <- data.frame("sing_vals" = rep_116_sing_vals2,
+                                "energy" = cumsum(rep_116_sing_vals2)/sum(rep_116_sing_vals2))
+# Plot singular value vs energy
+ggplot(rep_116_energy_df, aes(x = 1:nrow(rep_116_energy_df), y = energy)) +
+  geom_point() +
+  theme_bw(base_size = 15) +
+  labs(title = "Energy graph of 116th House",
+       y = "Cumulative Energy", x = "k") + 
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+# Compute singular vectors and the data frame for the 116th senate to plot singular
+# values vs. energy
+sen_116_sing_vals2 <- sen_116_svd$d^2
+sen_116_energy_df <- data.frame("sing_vals" = sen_116_sing_vals2,
+                                "energy" = cumsum(sen_116_sing_vals2)/sum(sen_116_sing_vals2))
+# Plot singular value vs energy
+ggplot(sen_116_energy_df, aes(x = 1:nrow(sen_116_energy_df), y = energy)) +
+  geom_point() +
+  theme_bw(base_size = 15) +
+  labs(title = "Energy graph of 116th Senate",
+       y = "Cumulative Energy", x = "k") + 
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+```
+
+```{r, eval = FALSE, echo = TRUE, warning = FALSE, message = FALSE}
+# Create data frames used to map 116th House partisanship, taking U from SVD
+rep_116_u_df <- data.frame("x" = rep_116_svd$u[, 1], 
+                           "y" = rep_116_svd$u[, 2],
+                           "label" = rep_116$bioname)
+# Plot the partisanship for 116th House
+rep_116_u_plot <- ggplot(rep_116_u_df, aes(x = x, y = y, label = label)) + 
+  theme_bw(base_size = 15) +
+  geom_point(aes(color = rep_116$party_code)) +
+  scale_color_manual("Party", values = c("blue", "green", "red")) +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold")) +
+  labs(title = "Partisanship of 116th House", 
+       x = "Partisan Coordinate", y = "Bipartisan Coordinate")
+# Show the plot
+rep_116_u_plot 
+```
+
+```{r, eval = FALSE, echo = TRUE, warning = FALSE, message = FALSE}
+# Create data frames used to map 90th Senate partisanship, taking U from SVD
+sen_90_u_df <- data.frame("x" = sen_90_svd$u[, 1], 
+                           "y" = sen_90_svd$u[, 2],
+                           "label" = sen_90$bioname)
+# Plot the partisanship for 90th Senate
+sen_90_u_plot <- ggplot(sen_90_u_df, aes(x = x, y = y, label = label)) + 
+  theme_bw(base_size = 15) +
+  geom_point(aes(color = sen_90$party_code)) +
+  scale_color_manual("Party", values = c("blue", "red", "green")) +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold")) +
+  labs(title = "Partisanship of 90th Senate", 
+       x = "Partisan Coordinate", y = "Bipartisan Coordinate")
+# Show the plot
+sen_90_u_plot 
+```
+
+```{r, eval = FALSE, echo = FALSE, message = FALSE, warning = FALSE}
+# Create data frames used to map 90th House partisanship, taking U from SVD
+rep_90_u_df <- data.frame("x" = rep_90_svd$u[, 1], 
+                           "y" = rep_90_svd$u[, 2],
+                           "label" = rep_90$bioname)
+# Plot the partisanship for 90th House
+rep_90_u_plot <- ggplot(rep_90_u_df, aes(x = x, y = y, label = label)) + 
+  theme_bw(base_size = 15) +
+  geom_point(aes(color = rep_90$party_code)) +
+  scale_color_manual("Party", values = c("blue", "red", "green")) +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold")) +
+  labs(title = "Partisanship of 90th House", 
+       x = "Partisan Coordinate", y = "Bipartisan Coordinate")
+# Show the plot
+rep_90_u_plot 
+```
+
+```{r, eval = FALSE, echo = TRUE, warning = FALSE, message = FALSE}
+## Create another column to calculate Extremity for 116th house
+rep_116_u_df <- mutate(rep_116_u_df, "Extremity" = abs(x - mean(x)))
+## Find the most and least extreme individuals of 116th house
+rep_116_least_partisan <- filter(rep_116_u_df, Extremity == min(Extremity))
+rep_116_most_partisan <- filter(rep_116_u_df, Extremity == max(Extremity))
+## Make a table for the most and least extreme individuals of 116th house
+rep_116_u_df_extremity <- rbind(rep_116_least_partisan,rep_116_most_partisan)
+rep_116_u_df_extremity$Ranking <- c("Least Partisan","Most Partisan")
+tab1 <- as.matrix(rep_116_u_df_extremity)
+tab1 <- tab1[,-2]
+colnames(tab1)[1:2] <- c("Partisan Coordinate", "Bio Name")
+kable_styling(kable(tab1, caption = 'Extreme Partisanship in 116th House'))
+
+## Create another column to calculate Extremity for 116th senate
+sen_116_u_df <- mutate(sen_116_u_df, "Extremity" = abs(x - mean(x)))
+## Find the most and least extreme individuals of 116th senate
+sen_116_least_partisan <- filter(sen_116_u_df, Extremity == min(Extremity))
+sen_116_most_partisan <- filter(sen_116_u_df, Extremity == max(Extremity))
+## Make a table for the most and least extreme individuals of 116th senate
+sen_116_u_df_extremity <- rbind(sen_116_least_partisan,sen_116_most_partisan)
+sen_116_u_df_extremity$Ranking <- c("Least Partisan","Most Partisan")
+tab2 <- as.matrix(sen_116_u_df_extremity)
+tab2 <- tab2[,-2]
+colnames(tab2)[1:2] <- c("Partisan Coordinate", "Bio Name")
+kable_styling(kable(tab2, caption = 'Extreme Partisanship in 116th Senate'))
+```
+
+```{r, eval = FALSE, echo = TRUE, warning = FALSE, message = FALSE}
+## Filter the five flipped states from the 116th house data set
+mi_rep_116 <- rep_116 %>%
+  filter(state_abbrev %in% "MI" | state_abbrev %in% "WI" | state_abbrev %in% "PA"
+         | state_abbrev %in% "GA" | state_abbrev %in% "AZ") 
+## Calculate the SVD of the filtered data set
+mi_rep_116_svd <- svd(mi_rep_116[, -1:-4]) 
+## Produce the data frame used to map partisanship, taking U from the SVD product
+mi_rep_116_u_df <- data.frame("x" = mi_rep_116_svd$u[,1], 
+                           "y" = mi_rep_116_svd$u[,2],
+                           "label" = mi_rep_116$bioname)
+## Map the partisanship of the five flipped states of the 116th house
+mi_rep_116_u_plot <- ggplot(mi_rep_116_u_df, aes(x = x, y = y, label = label)) + 
+  theme_bw(base_size = 15) +
+  geom_point(aes(color = mi_rep_116$party_code)) +
+  scale_color_manual("Party", values = c("blue", "green", "red")) +
+  labs(title = "Partisanship of 116th House of Flipped States", 
+       x = "Partisan Coordinate", y = "Bipartisan Coordinate")
+mi_rep_116_u_plot
+
+## Filter the five flipped states from the 90th house data set
+mi_rep_90 <- rep_90 %>%
+  filter(state_abbrev %in% "MI" | state_abbrev %in% "WI" | state_abbrev %in% "PA"
+         | state_abbrev %in% "GA" | state_abbrev %in% "AZ") 
+## Calculate the SVD of the filtered data set
+mi_rep_90_svd <- svd(mi_rep_90[, -1:-4]) 
+## Produce the data frame used to map partisanship, taking U from the SVD product
+mi_rep_90_u_df <- data.frame("x" = mi_rep_90_svd$u[,1], 
+                           "y" = mi_rep_90_svd$u[,2],
+                           "label" = mi_rep_90$bioname)
+## Map the partisanship of the five flipped states of the 90th house
+mi_rep_90_u_plot <- ggplot(mi_rep_90_u_df, aes(x = x, y = y, label = label)) + 
+  theme_bw(base_size = 15) +
+  geom_point(aes(color = mi_rep_90$party_code)) +
+  scale_color_manual("Party", values = c("blue", "red")) +
+  labs(title = "Partisanship of 90th House of Flipped States",
+       x = "Partisan Coordinate", y = "Bipartisan Coordinate")
+mi_rep_90_u_plot
+```
+
+```{r, eval = FALSE, echo = TRUE, warning = FALSE, message = FALSE}
+# select the MA from rep_90
+ma_rep_90 <- rep_90 %>%
+  filter(state_abbrev %in% "MA")
+# get the SVD 
+ma_rep_90_svd <- svd(ma_rep_90[, -1:-4]) 
+ma_rep_90_u_df <- data.frame("x" = ma_rep_90_svd$u[,1], 
+                           "y" = ma_rep_90_svd$u[,2],
+                           "label" = ma_rep_90$bioname)
+# plot the SVD of the partisanship
+ma_rep_90_u_plot <- ggplot(ma_rep_90_u_df,
+                           aes(x = x, y = y, label = label)) + 
+  theme_bw(base_size = 15) +
+  geom_point(aes(color = ma_rep_90$party_code)) +
+  scale_color_manual("Party", values = c("blue", "red")) +
+  labs(title = "Partisanship of 90th House of MA",
+       x = "Partisan Coordinate", y = "Bipartisan Coordinate") +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold")) 
+# print out the plot
+ma_rep_90_u_plot
+```
+
+```{r, eval = FALSE, echo = TRUE, warning = FALSE, message = FALSE}
+# select the MA from sen_90
+ma_sen_90 <- sen_90 %>%
+  filter(state_abbrev %in% "MA")
+# get the SVD 
+ma_sen_90_svd <- svd(ma_sen_90[, -1:-4]) 
+ma_sen_90_u_df <- data.frame("x" = ma_sen_90_svd$u[,1], 
+                           "y" = ma_sen_90_svd$u[,2],
+                           "label" = ma_sen_90$bioname)
+# plot the SVD of the partisanship
+ma_sen_90_u_plot <- ggplot(ma_sen_90_u_df,
+                           aes(x = x, y = y, label = label)) + 
+  theme_bw(base_size = 15) +
+  geom_point(aes(color = ma_sen_90$party_code)) +
+  scale_color_manual("Party", values = c("blue", "red")) +
+  labs(title = "Partisan of 90th Senate of MA",
+       x = "Partisan Coordinate", y = "Bipartisan Coordinate") +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold")) 
+# print out the plot
+ma_sen_90_u_plot
+```
+
+```{r, eval = FALSE, echo = TRUE, warning = FALSE, message = FALSE}
+# select the MA from rep_116
+ma_rep_116 <- rep_116 %>%
+  filter(state_abbrev %in% "MA")
+# get the SVD 
+ma_rep_116_svd <- svd(ma_rep_116[, -1:-4]) 
+ma_rep_116_u_df <- data.frame("x" = ma_rep_116_svd$u[,1], 
+                           "y" = ma_rep_116_svd$u[,2],
+                           "label" = ma_rep_116$bioname)
+# plot the SVD of the partisanship
+ma_rep_116_u_plot <- ggplot(ma_rep_116_u_df,
+                           aes(x = x, y = y, label = label)) + 
+  theme_bw(base_size = 15) +
+  geom_point(aes(color = ma_rep_116$party_code)) +
+  scale_color_manual("Party", values = c("blue", "red")) +
+  labs(title = "Partisanship of 116th House of MA",
+       x = "Partisan Coordinate", y = "Bipartisan Coordinate") +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold")) 
+# print out the plot
+ma_rep_116_u_plot
+```
+
+```{r, eval = FALSE, echo = TRUE, warning = FALSE, message = FALSE}
+# select the MA from sen_116
+ma_sen_116 <- sen_116 %>%
+  filter(state_abbrev %in% "MA")
+# get the SVD 
+ma_sen_116_svd <- svd(ma_sen_116[, -1:-4]) 
+ma_sen_116_u_df <- data.frame("x" = ma_sen_116_svd$u[,1], 
+                           "y" = ma_sen_116_svd$u[,2],
+                           "label" = ma_sen_116$bioname)
+# plot the SVD of the partisanship
+ma_sen_116_u_plot <- ggplot(ma_sen_116_u_df,
+                           aes(x = x, y = y, label = label)) + 
+  theme_bw(base_size = 15) +
+  geom_point(aes(color = ma_sen_116$party_code)) +
+  scale_color_manual("Party", values = c("blue", "red")) +
+  labs(title = "Partisanship of 116th Senate of MA",
+       x = "Partisan Coordinate", y = "Bipartisan Coordinate") +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold")) 
+# print out the plot
+ma_sen_116_u_plot
+```
+
